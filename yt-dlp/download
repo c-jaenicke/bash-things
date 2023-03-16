@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# download something from a list of urls contained in a file
+
+formatArgs=""
+
+# hardcode username and password if you dont want to call the sript with them each time
+password=""
+username=""
+
+# standard formatting for ouput
+# see https://github.com/yt-dlp/yt-dlp#output-template for options
+# Example: Partiboi69 - Live G House⧸G Tech Mix - oynRwBki8GE.m4a
+outputFormat="%(channel|creator|uploader)s - %(title)s - %(id)s.%(ext)s"
+
+helpString="[Script] [Info] Usage: -f FILENAME -v|-s [-u] [-p] [-h]\n\t-f\tSpeficy file from which to read URLs\n\t-v\tDownload best video and audio combined\n\t-s\tOnly download audio\n\t-u\tLogin with this account ID\n\t-p\tAccount password. If this option is left out, yt-dlp will ask interactively\n\t-h\tPrint this help string\n"
+
+# TODO figure out a way to get (v XOR s) to work
+while getopts 'v|sf:u:p:h' OPTION; do
+    case "$OPTION" in
+        v)
+            # set args to bet video and audio combined
+            formatArgs+=" -f bestvideo*+bestaudio/best"
+        ;;
+        
+        s)
+            # set args to only download audio in m4a format
+            formatArgs+="-f  m4a"
+        ;;
+        
+        f)
+            # get file and filename
+            file="$OPTARG"
+            filename="${file%.*}"
+            
+            printf "[Script Info] Creating folder $filename"
+            mkdir ./$filename
+        ;;
+        
+        u)
+            formatArgs+=" -u $OPTARG"
+        ;;
+        
+        p)
+            formatArgs+=" -p $OPTARG"
+        ;;
+        
+        h)
+            printf "$helpString"
+            exit 1
+        ;;
+        
+        ?|*)
+            printf "$helpString"
+            exit 1
+        ;;
+    esac
+done
+
+# exit if no file given
+if [ -z $file ]; then
+    printf "$helpString[Script] [Error] No file containing urls given! Use -f <filename> to specify the file! Exiting ...\n"
+    exit 1
+fi
+
+printf "##### STARTING ##### \n[Script] [Info] Downloading from file $file\n"
+
+# download using yt-dlp
+python ./yt-dlp "$formatArgs" -a $file -P ./$filename  --embed-thumbnail -o "$outputFormat"
+
+printf "##### DONE #####\n"
+
+# send dunst notification
+notify-send -a yt-dlp -u normal "Download done" "Download from file $file is done!"
+
