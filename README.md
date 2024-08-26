@@ -1,3 +1,3 @@
 # bash-things
 
-An assortment of bash things
+An assortment of bash scripts.
