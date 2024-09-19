@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
-# script for authenticationg with a key
+# Script to authenticate using SSH on git.
+# This scripts starts a new ssh-agent, adds the needed key, performs the action and kills the
+# previously started ssh-agent.
 
 # start ssh agent
-eval "$(ssh-agent -s)" > /dev/null
+eval "$(ssh-agent -s)" > "/dev/null"
 
 # add key to agent
-ssh-add ~/.ssh/git/git > /dev/null
+# CHANGE PATH TO KEY HERE
+ssh-add "<PATH TO KEY>" > "/dev/null"
 
-operation=$@
-
-if [ -v operation ]; then
-  git $@
+if [[ -z "$1" ]]; then
+  git "$@"
 fi
 
-ssh-agent -k > /dev/null
+ssh-agent -k > "/dev/null"
