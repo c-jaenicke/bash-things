@@ -10,7 +10,7 @@ eval "$(ssh-agent -s)" > "/dev/null"
 # CHANGE PATH TO KEY HERE
 ssh-add "<PATH TO KEY>" > "/dev/null"
 
-if [[ -z "$1" ]]; then
+if [[ -n "$1" ]]; then
   git "$@"
 fi
 
