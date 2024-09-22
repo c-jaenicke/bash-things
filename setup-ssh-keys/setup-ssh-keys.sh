@@ -39,14 +39,14 @@ get_input_comment () {
     fi
 }
 
-# Get type of key to generate. Use standard ed25519 key if no input and no YubiKey used. If YubiKey used, set type to ed25519-sk.
+# Get key_type of key to generate. Use standard ed25519 key if no input and no YubiKey used. If YubiKey used, set key_type to ed25519-sk.
 get_input_type () {
-    read -r -p "##### (-t) Enter the type of key you want to create (default=ed25519 | YubiKey default=ed25519-sk) [Regular: ed25519 | rsa] [Yubikey: ed25519-sk]: " type
-    if [[ -z "$type" ]]; then
+    read -r -p "##### (-t) Enter the key_type of key you want to create (default=ed25519 | YubiKey default=ed25519-sk) [Regular: ed25519 | rsa] [Yubikey: ed25519-sk]: " key_type
+    if [[ -z "$key_type" ]]; then
         if [[ "$yubikey" == "y" ]]; then
-            type="ed25519-sk"
+            key_type="ed25519-sk"
         else
-            type="ed25519"
+            key_type="ed25519"
         fi
     fi
 }
@@ -61,29 +61,53 @@ get_input_yubikey () {
     fi
 }
 
-# Get filename to save new key under. Use name based on type of key used it no input.
+# Get filename to save new key under. Use name based on key_type of key used it no input.
 get_input_filename () {
-    read -r -p "##### (-f) Enter  file in which to save the key (default=\"id_$1\"): " filename
+    read -r -p "##### (-f) Enter file in which to save the key (default=\"id_$1\"): " filename
     if [[ -z "$filename" ]]; then
         filename="id_$1"
     fi
 }
 
+# Get passphrase to add to key. Set none if no input.
+get_input_passphrase () {
+  read -r -p "##### (-N) Enter a passphrase to add to the key (default=empty): " key_passphrase
+  if [[ -z "$key_passphrase" ]]; then
+      key_passphrase=""
+  fi
+}
+
 # Generate a new key pair with given values.
 generate_key () {
     printf "########## 1. Create new key pair\n"
-    get_input_comment
-    get_input_yubikey
-    get_input_type
-    get_input_filename "$type"
-    printf "##### Creating a new key pair using the values:\n\tUse Yuibkey: %s\n\tType: %s\n\tComment: %s\n" "$yubikey" "$type" "$key_comment"
+    if [[ -z "$yubikey" ]]; then
+       get_input_yubikey
+    fi
+    if [[ -z "$key_comment" ]]; then
+        get_input_comment
+    fi
+    if [[ -z "$key_type" ]]; then
+        get_input_type
+    fi
+    if [[ -z "$key_passphrase" ]]; then
+        get_input_passphrase
+    fi
+    if [[ -z "$filename" ]]; then
+        get_input_filename "$key_type"
+    fi
+
+    printf "##### Creating a new key pair using the values:
+    Using YuibKey: %s
+    Type: %s
+    Comment: %s
+    Passphrase: %s\n" "$yubikey" "$key_type" "$key_comment" "$key_passphrase"
     printf "##### Saving files in %s/%s and %s/%s.pub\n" "$(pwd)" "$filename" "$(pwd)" "$filename"
 
     if [[ "$yubikey" == "y" ]]; then
         # Source: https://developers.yubico.com/SSH/Securing_SSH_with_FIDO2.html (2024-09-19)
-        ssh-keygen -f "$filename" -C "$key_comment" -t "$type" -a 100 -O resident -O verify-required
+        ssh-keygen -f "$filename" -C "$key_comment" -t "$key_type" -a 100 -N "$key_passphrase" -O resident -O verify-required
     else
-        ssh-keygen -f "$filename" -C "$key_comment" -t "$type" -a 100
+        ssh-keygen -f "$filename" -C "$key_comment" -t "$key_type" -a 100 -N "$key_passphrase"
     fi
 }
 
@@ -127,10 +151,15 @@ upload_key () {
 # Print a help string.
 print_help () {
     printf "########## Help:
-    $ setup-ssh-keys [-h|help] [-g|gen] [-u|upload]
-        -h|help: print this help text
-        -g|gen: generate a new key
-        -u|upload: upload a key
+    $ setup-ssh-keys gen|upload|help|-h [-y] [-c comment] [-t key type] [-p passphrase] [-f filename]
+        gen: generate a new key pair
+        upload: upload a key to a system
+        help|-h: print this help text
+        -y: use a YubiKey
+        -c: set comment for key
+        -t: set key type (Regular: ed25519 | rsa) (Yubikey: ed25519-sk)
+        -p: set passphrase for key
+        -f: set filename for new key
 
     This script performs the following tasks:
         1. Generates a new key pair, with optional Yubikey integration.
@@ -142,16 +171,46 @@ print_help () {
 ####################################################################################################
 # SCRIPT
 ####################################################################################################
+while getopts "yhc:t:p:f:" option; do
+    case $option in
+        y)
+            yubikey="y"
+            ;;
+
+        c)
+          key_comment="$OPTARG"
+          ;;
+
+        t)
+          key_type="$OPTARG"
+          ;;
+
+        p)
+          key_passphrase="$OPTARG"
+          ;;
+
+        f)
+          filename="$OPTARG"
+          ;;
+
+        h)
+            print_help
+            exit
+            ;;
+    esac
+done
+
 case $1 in
-    -h|help)
+    help)
         print_help
+        exit
         ;;
 
-    -g|gen)
+    gen)
         generate_key
         ;;
 
-    -u|upload)
+    upload)
         upload_key
         ;;
 
