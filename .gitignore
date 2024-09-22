@@ -1,4 +1,5 @@
 .idea
-*.pub
-./setup-ssh-keys-ssh-keys/
-!*.sh
+
+# setup-ssh-keys
+/setup-ssh-keys/*
+!setup-ssh-keys.sh
