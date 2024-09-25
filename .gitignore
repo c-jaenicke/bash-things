@@ -3,3 +3,8 @@
 # setup-ssh-keys
 /setup-ssh-keys/*
 !setup-ssh-keys.sh
+
+# gpg-key-management
+/gpg-key-management/*
+!generate-keys.sh
+!renew-keys.sh
